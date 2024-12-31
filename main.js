@@ -1,23 +1,45 @@
 // See https://stackoverflow.com/questions/35246590/how-to-add-a-mtl-texture-to-an-obj-in-three-js
 // See https://threejs.org/examples/#webgl_loader_obj_mtl
 
+// Example models: https://github.com/alecjacobson/common-3d-test-models
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+// Testing
+// https://stackoverflow.com/questions/43205098/how-to-render-normals-to-surface-of-object-in-three-js
+
 let camera, scene, renderer;
 let object;
 
-function initObjSingleTexture() {
+function initObjSingleTexture(objFile, textureFile) {
   // manager
   function loadModel() {
     object.traverse( function ( child ) {
-      if ( child.isMesh ) child.material.map = texture;
+      // if ( child.isMesh ) child.material.map = texture;
+      if ( child instanceof THREE.Mesh ) {
+	// Compute normals
+	// child.geometry.computeVertexNormals();
+	if (textureFile) {
+	  child.material.map = texture;
+	} else {
+	  child.material = new THREE.MeshLambertMaterial( { color: 0xff6600 });
+	  child.material.shading = THREE.SmoothShading;
+	}
+      }
     });
 
-    object.position.y = - 0.95;
-    object.scale.setScalar( 0.01 );
+    const bbox = new THREE.Box3().setFromObject(object);
+    // console.log('!!!', bbox, object.position);
+    
+    const lx = (bbox.max.x - bbox.min.x);
+    const ly = (bbox.max.y - bbox.min.y);
+    const lz = (bbox.max.z - bbox.min.z);
+    const scale = ((lx + ly + lz) / 3) / 10;
+
+
+    object.scale.setScalar( scale );
     scene.add( object );
     render();
   }
@@ -26,7 +48,7 @@ function initObjSingleTexture() {
 
   // texture
   const textureLoader = new THREE.TextureLoader( manager );
-  const texture = textureLoader.load( 'male02/01_-_Default1noCulling.JPG', render );
+  const texture = textureLoader.load( textureFile, render );
   texture.colorSpace = THREE.SRGBColorSpace;
 
   // model
@@ -39,11 +61,11 @@ function initObjSingleTexture() {
   function onError() {}
 
   const loader = new OBJLoader( manager );
-  loader.load( 'male02/male02.obj', function ( obj ) {
+  loader.load(objFile, function ( obj ) {
       object = obj;
   }, onProgress, onError );
-
 }
+
 
 function initObjMTL() {
   function onProgress( xhr ) {
@@ -86,8 +108,8 @@ function init() {
   camera.add( pointLight );
   scene.add( camera );
 
-  // initObjSingleTexture();
-  initObjMTL();
+  initObjSingleTexture('models/spot.obj', 'models/texture_test.JPG');
+  // initObjMTL();
 
   renderer = new THREE.WebGLRenderer( { antialias: true } );
   renderer.setPixelRatio( window.devicePixelRatio );
@@ -95,8 +117,8 @@ function init() {
   document.body.appendChild( renderer.domElement );
 
   const controls = new OrbitControls( camera, renderer.domElement );
-  controls.minDistance = 2;
-  controls.maxDistance = 5;
+  controls.minDistance = 1;
+  controls.maxDistance = 8;
   controls.addEventListener( 'change', render );
 
   window.addEventListener( 'resize', onWindowResize );
