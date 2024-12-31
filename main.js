@@ -1,5 +1,9 @@
 // See https://stackoverflow.com/questions/35246590/how-to-add-a-mtl-texture-to-an-obj-in-three-js
+
+
+// ThreeJS stuff
 // See https://threejs.org/examples/#webgl_loader_obj_mtl
+// See https://threejs.org/examples/#webgl_effects_ascii
 
 // Example models: https://github.com/alecjacobson/common-3d-test-models
 import * as THREE from 'three';
