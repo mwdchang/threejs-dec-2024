@@ -4,6 +4,9 @@
 // ThreeJS stuff
 // See https://threejs.org/examples/#webgl_loader_obj_mtl
 // See https://threejs.org/examples/#webgl_effects_ascii
+//
+// ThreeJS Testing
+// https://stackoverflow.com/questions/43205098/how-to-render-normals-to-surface-of-object-in-three-js
 
 // Example models: https://github.com/alecjacobson/common-3d-test-models
 import * as THREE from 'three';
@@ -11,9 +14,15 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// Testing
-// https://stackoverflow.com/questions/43205098/how-to-render-normals-to-surface-of-object-in-three-js
+// pipeline composition
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
+import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
+
+let composer;
 let camera, scene, renderer;
 let object;
 
@@ -36,7 +45,6 @@ function initObjSingleTexture(objFile, textureFile) {
 
     const bbox = new THREE.Box3().setFromObject(object);
     // console.log('!!!', bbox, object.position);
-    
     const lx = (bbox.max.x - bbox.min.x);
     const ly = (bbox.max.y - bbox.min.y);
     const lz = (bbox.max.z - bbox.min.z);
@@ -45,14 +53,13 @@ function initObjSingleTexture(objFile, textureFile) {
 
     object.scale.setScalar( scale );
     scene.add( object );
-    render();
   }
 
   const manager = new THREE.LoadingManager( loadModel );
 
   // texture
   const textureLoader = new THREE.TextureLoader( manager );
-  const texture = textureLoader.load( textureFile, render );
+  const texture = textureLoader.load( textureFile, renderLoop );
   texture.colorSpace = THREE.SRGBColorSpace;
 
   // model
@@ -114,6 +121,15 @@ function init() {
 
   initObjSingleTexture('models/spot.obj', 'models/texture_test.JPG');
   // initObjMTL();
+ 
+  const boxGeometry = new THREE.BoxGeometry( 1, 1, 1 );
+  const boxMaterial = new THREE.MeshLambertMaterial( { color: "#433F81" } );
+  const cube = new THREE.Mesh( boxGeometry, boxMaterial );
+  cube.position.x = 0.3;
+  cube.position.y = 0.3;
+  cube.scale.setScalar(0.15);
+  scene.add( cube );
+
 
   renderer = new THREE.WebGLRenderer( { antialias: true } );
   renderer.setPixelRatio( window.devicePixelRatio );
@@ -123,9 +139,25 @@ function init() {
   const controls = new OrbitControls( camera, renderer.domElement );
   controls.minDistance = 1;
   controls.maxDistance = 8;
-  controls.addEventListener( 'change', render );
+  controls.addEventListener( 'change', renderLoop );
 
   window.addEventListener( 'resize', onWindowResize );
+
+
+  composer = new EffectComposer( renderer );
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass( renderPass );
+
+  const glitchPass = new GlitchPass(64);
+  glitchPass.renderToScreen = true;
+  composer.addPass( glitchPass );
+
+  const outputPass = new OutputPass();
+  composer.addPass( outputPass );
+
+  // Old Film Look
+  // const filmPass = new FilmPass();
+  // composer.addPass(filmPass);
 }
 
 function onWindowResize() {
@@ -134,18 +166,18 @@ function onWindowResize() {
   renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
-function render() {
-  renderer.render( scene, camera );
+function renderLoop() {
+  // renderer.render( scene, camera );
+  composer.render();
 }
 
-
 init();
-
 
 // Attach
 document.body.appendChild( renderer.domElement );
 
 function animate() {
-  renderer.render( scene, camera );
+  // renderer.render( scene, camera );
+  renderLoop();
 }
 renderer.setAnimationLoop( animate );
